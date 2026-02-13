@@ -1,20 +1,18 @@
-const exec = require('node:child_process').exec
+const { exec } = require('node:child_process')
+const { promisify } = require('node:util')
 
-exports.runCmd = async (cmd, options) => {
-  return new Promise((resolve, reject) => {
-    exec(cmd, options, (err, stdout) => {
-      if (err) {
-        // Retry without options as fallback
-        exec(cmd, (err2, stdout2) => {
-          if (err2) {
-            reject({ err: err2, stdout: stdout2 })
-          } else {
-            resolve(stdout2)
-          }
-        })
-      } else {
-        resolve(stdout)
-      }
-    })
-  })
+// Promisify correctly handles the (cmd, options, callback) signature
+const execAsync = promisify(exec)
+
+exports.runCmd = async (cmd, options = {}) => {
+  try {
+    // This is the standard!
+    const { stdout, stderr } = await execAsync(cmd, options)
+    return stdout
+  } catch (err) {
+    // If it fails with options, you can try a fallback without them
+    // though usually, errors here are command-related, not signature-related
+    const { stdout } = await execAsync(cmd)
+    return stdout
+  }
 }
